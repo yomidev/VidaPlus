@@ -1,0 +1,8 @@
+# config/mysql-backup.cnf
+# Credenciales para mysqldump. NO versionar. NO es accesible por URL.
+
+[client]
+user     = backup_user
+password = Backup_VidaPlus#2026!
+host     = localhost
+port     = 3306
