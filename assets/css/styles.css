@@ -1,0 +1,11 @@
+/* assets/css/styles.css */
+/* Tailwind cubre el 99% de los estilos. Aquí solo lo que no. */
+
+/* Scrollbar más delgada en tablas anchas */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
