@@ -17,4 +17,6 @@ return [
         'auditor'      => ['user' => 'app_auditor',      'pass' => 'Audit_VidaPlus#2026!'],
         'cliente'      => ['user' => 'app_portal',       'pass' => 'Portal_VidaPlus#2026!'],
     ],
+
+    'portal_user_id' => 7,
 ];

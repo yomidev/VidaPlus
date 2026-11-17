@@ -39,6 +39,7 @@
                 </h3>
                 <ul class="space-y-2 text-sm">
                     <?php if (!empty($menu)): foreach ($menu as $item): ?>
+                        <?php if (($item['type'] ?? '') === 'sep') continue; ?>
                         <li>
                             <a href="<?= e($item['href']) ?>"
                                class="text-white/70 hover:text-white transition-colors inline-flex items-center gap-2">

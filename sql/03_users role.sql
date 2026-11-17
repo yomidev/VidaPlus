@@ -189,3 +189,49 @@ FLUSH PRIVILEGES;
 
 -- Verificar
 SHOW GRANTS FOR 'backup_user'@'localhost';
+
+-- Lectura necesaria
+GRANT SELECT ON vidaplus.paises              TO 'rol_portal';
+GRANT SELECT ON vidaplus.ventas               TO 'rol_portal';
+GRANT SELECT ON vidaplus.detalle_ventas       TO 'rol_portal';
+GRANT SELECT ON vidaplus.envios               TO 'rol_portal';
+GRANT SELECT ON vidaplus.pagos                TO 'rol_portal';
+
+-- Escritura controlada
+GRANT INSERT, UPDATE ON vidaplus.direcciones_cliente TO 'rol_portal';
+GRANT INSERT         ON vidaplus.envios              TO 'rol_portal';
+
+FLUSH PRIVILEGES;
+
+-- Verificar
+SHOW GRANTS FOR 'app_portal'@'localhost';
+
+GRANT SELECT ON vidaplus.medicamentos TO 'app_portal'@'localhost';
+GRANT SELECT ON vidaplus.categorias   TO 'app_portal'@'localhost';
+GRANT SELECT ON vidaplus.laboratorios TO 'app_portal'@'localhost';
+FLUSH PRIVILEGES;
+
+USE vidaplus;
+
+-- El cliente necesita INSERTAR en ventas, detalles, pagos (además de envíos que ya tenía)
+GRANT INSERT ON vidaplus.ventas          TO 'rol_portal';
+GRANT INSERT ON vidaplus.detalle_ventas  TO 'rol_portal';
+GRANT INSERT ON vidaplus.pagos           TO 'rol_portal';
+
+FLUSH PRIVILEGES;
+
+-- Verificar
+SHOW GRANTS FOR 'app_portal'@'localhost';
+
+USE vidaplus;
+
+-- ============================================================
+-- PERMISOS PARA app_farmaceutico (proveedores, compras, envíos)
+-- ============================================================
+GRANT SELECT, INSERT, UPDATE ON vidaplus.proveedores     TO 'rol_farmaceutico';
+GRANT SELECT, INSERT, UPDATE ON vidaplus.compras          TO 'rol_farmaceutico';
+GRANT SELECT, INSERT, UPDATE ON vidaplus.detalle_compras  TO 'rol_farmaceutico';
+GRANT SELECT, UPDATE         ON vidaplus.envios           TO 'rol_farmaceutico';
+GRANT SELECT, UPDATE         ON vidaplus.ventas           TO 'rol_farmaceutico';
+
+FLUSH PRIVILEGES;

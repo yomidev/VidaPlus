@@ -107,9 +107,17 @@ function accionListar(): void
 
     // 4. Query principal
     if ($esCliente) {
-        $sql = "SELECT nombre, presentacion, categoria, precio_venta, stock
-                FROM v_catalogo_online
-                $whereSql $ordenSql";
+        // El cliente SOLO ve medicamentos sin receta, activos y con stock.
+        // Se incluye id_medicamento para el botón "Agregar al carrito".
+        $sql = "SELECT m.id_medicamento, m.nombre, m.presentacion,
+                       c.nombre AS categoria, m.precio_venta, m.stock
+                FROM medicamentos m
+                INNER JOIN categorias c ON m.id_categoria = c.id_categoria
+                WHERE m.activo = 1
+                  AND m.requiere_receta = 0
+                  AND m.stock > 0
+                ORDER BY m.nombre";
+        $params = []; // El cliente no usa filtros dinámicos de lab/stock
     } else {
         $sql = "SELECT m.id_medicamento, m.codigo_barras, m.nombre, m.presentacion,
                        m.precio_compra, m.precio_venta, m.stock, m.stock_minimo,
@@ -261,7 +269,7 @@ function accionListar(): void
                 </select>
             </div>
 
-            <!-- Laboratorio -->
+            <!-- Laboratorio (solo empleados) -->
             <?php if (!$esCliente): ?>
             <div class="lg:col-span-3">
                 <select name="laboratorio"
@@ -290,7 +298,7 @@ function accionListar(): void
                 </select>
             </div>
 
-            <!-- Botón aplicar (solo visible en móvil, en desktop se aplica al cambiar) -->
+            <!-- Botón aplicar (móvil) -->
             <div class="lg:hidden">
                 <button type="submit"
                         class="w-full bg-primary-700 hover:bg-primary-800 text-white text-sm
@@ -327,7 +335,6 @@ function accionListar(): void
                 <thead class="bg-gray-50">
                     <tr>
                         <?php
-                        // Helper para generar link de ordenamiento
                         $sortLink = function (string $key, string $label) use ($orden, $dir): string {
                             $nuevoDir = ($orden === $key && $dir === 'ASC') ? 'DESC' : 'ASC';
                             $flecha = '';
@@ -357,9 +364,9 @@ function accionListar(): void
                         <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">
                             <?= $sortLink('stock', 'Stock') ?>
                         </th>
-                        <?php if (!$esCliente): ?>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Acciones</th>
-                        <?php endif; ?>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">
+                            <?= $esCliente ? 'Comprar' : 'Acciones' ?>
+                        </th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
@@ -393,10 +400,11 @@ function accionListar(): void
                         </td>
                     </tr>
                 <?php else: foreach ($rows as $m):
-                    $margen = ($m['precio_compra'] ?? 0) > 0
+                    // Cálculos protegidos para cliente (no existen precio_compra ni stock_minimo)
+                    $margen = (!$esCliente && ($m['precio_compra'] ?? 0) > 0)
                         ? round((($m['precio_venta'] - $m['precio_compra']) / $m['precio_venta']) * 100, 1)
                         : null;
-                    $stockPct = !$esCliente && $m['stock_minimo'] > 0
+                    $stockPct = (!$esCliente && ($m['stock_minimo'] ?? 0) > 0)
                         ? min(100, round(($m['stock'] / max(1, $m['stock_minimo'] * 3)) * 100))
                         : 0;
                     $stockColor = $m['stock'] == 0 ? 'bg-red-500'
@@ -441,19 +449,37 @@ function accionListar(): void
                         </td>
                         <td class="px-4 py-3 text-right">
                             <?php if ($esCliente): ?>
-                                <span class="text-sm text-gray-900"><?= $m['stock'] ?></span>
+                                <span class="text-sm text-gray-900"><?= (int)$m['stock'] ?></span>
                             <?php else: ?>
                                 <div class="text-sm text-gray-900 font-medium">
-                                    <?= $m['stock'] ?>
-                                    <span class="text-xs text-gray-400">/ <?= $m['stock_minimo'] ?> mín</span>
+                                    <?= (int)$m['stock'] ?>
+                                    <span class="text-xs text-gray-400">/ <?= (int)$m['stock_minimo'] ?> mín</span>
                                 </div>
                                 <div class="w-20 h-1.5 bg-gray-200 rounded-full mt-1 ml-auto overflow-hidden">
                                     <div class="h-full <?= $stockColor ?> rounded-full" style="width: <?= $stockPct ?>%"></div>
                                 </div>
                             <?php endif; ?>
                         </td>
-                        <?php if (!$esCliente): ?>
-                            <td class="px-4 py-3 text-right whitespace-nowrap space-x-1">
+
+                        <!-- Columna final: Comprar (cliente) / Acciones (empleados) -->
+                        <td class="px-4 py-3 text-right whitespace-nowrap space-x-1">
+                            <?php if ($esCliente): ?>
+                                <?php if ((int)$m['stock'] > 0): ?>
+                                    <form method="POST" action="/modules/portal/carrito.php?accion=agregar" class="inline">
+                                        <input type="hidden" name="id_medicamento" value="<?= (int)$m['id_medicamento'] ?>">
+                                        <button type="submit"
+                                                class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded
+                                                       bg-primary-700 hover:bg-primary-800 text-white transition">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                            </svg>
+                                            Agregar
+                                        </button>
+                                    </form>
+                                <?php else: ?>
+                                    <span class="text-xs text-gray-400">Sin stock</span>
+                                <?php endif; ?>
+                            <?php else: ?>
                                 <?php if (esRol('admin','farmaceutico')): ?>
                                     <a href="/modules/medicamentos.php?accion=editar&id=<?= (int)$m['id_medicamento'] ?>"
                                        class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded
@@ -466,7 +492,7 @@ function accionListar(): void
                                     </a>
                                 <?php endif; ?>
                                 <?php if (esRol('cajero','farmaceutico','admin')): ?>
-                                    <a href="/modules/ventas.php?accion=nueva&medicamento=<?= (int)$m['id_medicamento'] ?>"
+                                    <a href="/modules/ventas_nueva.php?medicamento=<?= (int)$m['id_medicamento'] ?>"
                                        class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded
                                               bg-primary-700 hover:bg-primary-800 text-white transition">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -487,8 +513,8 @@ function accionListar(): void
                                         Eliminar
                                     </a>
                                 <?php endif; ?>
-                            </td>
-                        <?php endif; ?>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                 <?php endforeach; endif; ?>
                 </tbody>
@@ -551,7 +577,7 @@ function accionCrear(): void
     $tituloPagina = 'Nuevo medicamento';
     $modo = 'crear';
     require __DIR__ . '/../includes/header.php';
-    require __DIR__ . '/../includes/forms/medicamentos_form.php';
+    require __DIR__ . '/../includes/medicamentos_form.php';
     require __DIR__ . '/../includes/footer.php';
 }
 
@@ -618,7 +644,7 @@ function accionEditar(): void
 }
 
 // ============================================================
-// ACCIÓN: ELIMINAR (mejorada con detalles)
+// ACCIÓN: ELIMINAR (con detalles y dependencias)
 // ============================================================
 function accionEliminar(): void
 {
@@ -662,7 +688,6 @@ function accionEliminar(): void
     require __DIR__ . '/../includes/header.php';
     ?>
     <div class="max-w-2xl mx-auto">
-        <!-- Breadcrumb -->
         <nav class="flex items-center gap-2 text-sm text-gray-500 mb-4">
             <a href="/modules/medicamentos.php" class="hover:text-primary-600 transition">Medicamentos</a>
             <span>›</span>
@@ -689,7 +714,6 @@ function accionEliminar(): void
                 </div>
             </div>
 
-            <!-- Ficha del medicamento -->
             <div class="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
                 <div class="flex justify-between text-sm">
                     <span class="text-gray-500">Nombre:</span>
@@ -713,7 +737,6 @@ function accionEliminar(): void
                 </div>
             </div>
 
-            <!-- Advertencias según dependencias -->
             <?php if ($tieneVentas): ?>
                 <div class="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-200">
                     <div class="flex items-start gap-3">

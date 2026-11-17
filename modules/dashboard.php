@@ -671,79 +671,73 @@ $saludo = $hora < 12 ? 'Buenos días' : ($hora < 19 ? 'Buenas tardes' : 'Buenas 
 
 <?php elseif ($rol === 'cliente'): ?>
     <?php
-    // ============================================================
-    // DASHBOARD CLIENTE (PORTAL)
-    // ============================================================
-    $productos = (int)$pdo->query("SELECT COUNT(*) FROM v_catalogo_online")->fetchColumn();
-    $categorias = (int)$pdo->query("SELECT COUNT(DISTINCT categoria) FROM v_catalogo_online")->fetchColumn();
-
-    // Mis compras (si tiene historial)
-    $idCliente = (int)$_SESSION['usuario_id'];
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) AS num, COALESCE(SUM(total),0) AS total
-        FROM ventas
-        WHERE id_cliente = ? AND estado='completada'
+    $stmtProd = $pdo->prepare("
+        SELECT COUNT(*) FROM medicamentos
+        WHERE activo = 1 AND requiere_receta = 0 AND stock > 0
     ");
-    $stmt->execute([$idCliente]);
-    $misCompras = $stmt->fetch();
-
-    // Puntos de lealtad
-    $stmt = $pdo->prepare("SELECT puntos_lealtad FROM clientes WHERE id_cliente = ?");
-    $stmt->execute([$idCliente]);
-    $puntos = (int)$stmt->fetchColumn();
+    $stmtProd->execute();
+    $productos = (int)$stmtProd->fetchColumn();
+    $direcciones = 0;
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM direcciones_cliente WHERE id_cliente = ? AND activa = 1");
+    $stmt->execute([$_SESSION['usuario_id']]);
+    $direcciones = (int)$stmt->fetchColumn();
     ?>
 
-    <!-- Bienvenida cliente -->
-    <div class="bg-gradient-to-br from-primary-700 to-primary-500 text-white rounded-2xl p-8 mb-6 shadow-lg">
-        <h2 class="text-2xl font-bold mb-2">¡Bienvenido a VidaPlus!</h2>
-        <p class="text-white/80 mb-6">Tu farmacia en línea, siempre disponible.</p>
-        <a href="/modules/medicamentos.php"
-           class="inline-flex items-center gap-2 bg-white text-primary-700 font-semibold
-                  px-5 py-2.5 rounded-lg hover:bg-gray-50 transition shadow">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-            </svg>
-            Ver catálogo
-        </a>
-    </div>
-
-    <!-- Info del cliente -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div class="text-xs text-gray-500 uppercase tracking-wide">Productos disponibles</div>
             <div class="text-3xl font-bold text-gray-900 mt-1"><?= $productos ?></div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <div class="text-xs text-gray-500 uppercase tracking-wide">Categorías</div>
-            <div class="text-3xl font-bold text-gray-900 mt-1"><?= $categorias ?></div>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-purple-200 p-5">
-            <div class="text-xs text-purple-700 uppercase tracking-wide">Mis puntos</div>
-            <div class="text-3xl font-bold text-purple-600 mt-1"><?= number_format($puntos) ?></div>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-emerald-200 p-5">
-            <div class="text-xs text-emerald-700 uppercase tracking-wide">Mis compras</div>
-            <div class="text-3xl font-bold text-emerald-600 mt-1"><?= (int)$misCompras['num'] ?></div>
-            <?php if ($misCompras['num'] > 0): ?>
-                <div class="text-xs text-emerald-700 mt-1">
-                    $<?= number_format((float)$misCompras['total'], 2) ?>
+        <div class="bg-white rounded-xl shadow-sm border border-primary-200 p-5">
+            <div class="text-xs text-primary-700 uppercase tracking-wide">Mis direcciones</div>
+            <div class="text-3xl font-bold text-primary-600 mt-1"><?= $direcciones ?></div>
+            <?php if ($direcciones === 0): ?>
+                <div class="text-xs text-amber-600 mt-1">
+                    <a href="/modules/portal/mis_direcciones.php?accion=crear" class="hover:underline">
+                        + Agregar una
+                    </a>
                 </div>
             <?php endif; ?>
         </div>
-    </div>
-
-    <!-- Nota informativa -->
-    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-        <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-        </svg>
-        <div class="text-sm text-amber-800">
-            <strong>Recuerda:</strong> solo mostramos medicamentos sin receta médica.
-            Los medicamentos controlados deben adquirirse en sucursal.
+        <div class="bg-white rounded-xl shadow-sm border border-emerald-200 p-5">
+            <div class="text-xs text-emerald-700 uppercase tracking-wide">Mis compras</div>
+            <div class="text-3xl font-bold text-emerald-600 mt-1">
+                <?php
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM ventas WHERE id_cliente = ? AND estado='completada'");
+                $stmt->execute([$_SESSION['usuario_id']]);
+                echo (int)$stmt->fetchColumn();
+                ?>
+            </div>
         </div>
     </div>
 
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <a href="/modules/medicamentos.php"
+           class="bg-primary-700 hover:bg-primary-800 text-white rounded-xl p-5
+                  flex items-center gap-4 transition shadow-sm">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <div>
+                <div class="font-bold">Ver catálogo</div>
+                <div class="text-sm text-white/80">Explorar productos disponibles</div>
+            </div>
+        </a>
+        <a href="/modules/portal/mis_direcciones.php"
+           class="bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 rounded-xl p-5
+                  flex items-center gap-4 transition shadow-sm">
+            <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <div>
+                <div class="font-bold">Mis direcciones</div>
+                <div class="text-sm text-gray-500">Gestionar direcciones de envío</div>
+            </div>
+        </a>
+    </div>
 <?php endif; ?>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

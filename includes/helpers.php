@@ -53,3 +53,44 @@ function requiereRol(string ...$roles): void
           . '<a href="/index.php">Volver al inicio</a></div>');
     }
 }
+
+/**
+ * Devuelve el id_usuario del sistema que representa al portal web.
+ * Se usa para el campo ventas.id_usuario en ventas online.
+ */
+function idUsuarioPortal(): int
+{
+    static $id = null;
+    if ($id === null) {
+        $config = require __DIR__ . '/../config/database.php';
+        $id = (int)($config['portal_user_id'] ?? 0);
+        if ($id <= 0) {
+            throw new RuntimeException('portal_user_id no configurado en config/database.php');
+        }
+    }
+    return $id;
+}
+
+/**
+ * Devuelve el carrito actual como array [id_medicamento => cantidad].
+ */
+function carrito(): array
+{
+    return $_SESSION['carrito'] ?? [];
+}
+
+/**
+ * Cantidad total de items en el carrito (para el badge del menú).
+ */
+function carritoCantidad(): int
+{
+    return array_sum(carrito());
+}
+
+/**
+ * Vacía el carrito.
+ */
+function carritoVaciar(): void
+{
+    $_SESSION['carrito'] = [];
+}

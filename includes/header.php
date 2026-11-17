@@ -22,11 +22,19 @@ $badgeClass = $badgeMap[$rolActual] ?? 'bg-white/20 text-white ring-1 ring-white
 $menu = [];
 
 if (($_SESSION['tipo'] ?? '') === 'cliente') {
-
-    // Portal del cliente
     $menu[] = ['key' => 'medicamentos', 'label' => 'Catálogo',
                'href' => '/modules/medicamentos.php', 'icon' => 'beaker'];
 
+    $cantidadCarrito = carritoCantidad();
+    $labelCarrito = 'Carrito' . ($cantidadCarrito > 0 ? " ({$cantidadCarrito})" : '');
+    $menu[] = ['key' => 'carrito', 'label' => $labelCarrito,
+               'href' => '/modules/portal/carrito.php', 'icon' => 'cart'];
+
+    $menu[] = ['key' => 'mis_pedidos', 'label' => 'Mis pedidos',
+               'href' => '/modules/portal/mis_pedidos.php', 'icon' => 'package'];
+
+    $menu[] = ['key' => 'mis_direcciones', 'label' => 'Direcciones',
+               'href' => '/modules/portal/mis_direcciones.php', 'icon' => 'pin'];
 } else {
 
     // ── Grupo 1: Operación diaria ───────────────────────────
@@ -39,11 +47,25 @@ if (($_SESSION['tipo'] ?? '') === 'cliente') {
                    'href' => '/modules/ventas.php', 'icon' => 'cart'];
     }
 
+        // ── Grupo 1b: Suministro ────────────────────────────────
+    if (esRol('admin','farmaceutico')) {
+        $menu[] = ['key' => 'proveedores', 'label' => 'Proveedores',
+                   'href' => '/modules/proveedores.php', 'icon' => 'truck'];
+        $menu[] = ['key' => 'compras', 'label' => 'Compras',
+                   'href' => '/modules/compras.php', 'icon' => 'inbox'];
+    }
+
     // ── Grupo 2: Análisis ───────────────────────────────────
     if (esRol('admin','farmaceutico','auditor')) {
         $menu[] = ['type' => 'sep'];
         $menu[] = ['key' => 'reportes', 'label' => 'Reportes',
                    'href' => '/modules/reportes.php', 'icon' => 'chart'];
+    }
+
+    // ── Envíos (admin y farmacéutico) ───────────────────────
+    if (esRol('admin','farmaceutico')) {
+        $menu[] = ['key' => 'envios', 'label' => 'Envíos',
+                   'href' => '/modules/envios.php', 'icon' => 'shipping'];
     }
 
     // ── Grupo 3: Administración ─────────────────────────────
@@ -73,6 +95,11 @@ $iconos = [
     'shield'     => 'M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z',
     'chart'      => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
     'database' => 'M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7a2 2 0 00-2-2H6a2 2 0 00-2 2zm0 5h16M4 7c0 1.66 3.58 3 8 3s8-1.34 8-3',
+    'package' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+    'pin'     => 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z',
+    'truck'    => 'M9 17a2 2 0 11-4 0 2 2 0 014 0zm10 0a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1',
+    'inbox'    => 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4',
+    'shipping' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
 ];
 ?>
 <!DOCTYPE html>

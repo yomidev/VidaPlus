@@ -112,3 +112,61 @@ DELIMITER ;
 SELECT TRIGGER_NAME, EVENT_MANIPULATION, ACTION_TIMING, EVENT_OBJECT_TABLE
 FROM information_schema.TRIGGERS
 WHERE TRIGGER_SCHEMA = 'vidaplus';
+
+-- ============================================================
+-- TRIGGER 1: Al marcar una compra como 'recibida', sumar stock
+-- ============================================================
+DROP TRIGGER IF EXISTS tr_compras_recibir_sumar_stock;
+
+DELIMITER $$
+CREATE DEFINER = 'trigger_runner'@'localhost' TRIGGER tr_compras_recibir_sumar_stock
+AFTER UPDATE ON compras
+FOR EACH ROW
+BEGIN
+    IF OLD.estado != 'recibida' AND NEW.estado = 'recibida' THEN
+        -- Sumar el stock de todos los detalles
+        UPDATE medicamentos m
+          INNER JOIN detalle_compras dc ON m.id_medicamento = dc.id_medicamento
+           SET m.stock = m.stock + dc.cantidad
+         WHERE dc.id_compra = NEW.id_compra;
+
+        -- Registrar fecha de recepción si no está puesta
+        IF NEW.fecha_recepcion IS NULL THEN
+            UPDATE compras SET fecha_recepcion = NOW() WHERE id_compra = NEW.id_compra;
+        END IF;
+
+        -- Auditoría
+        INSERT INTO auditoria (usuario_bd, tabla_afectada, accion, id_registro, detalle)
+        VALUES (USER(), 'compras', 'RECEPCION', NEW.id_compra,
+                CONCAT('Compra ', NEW.folio, ' recibida; stock incrementado'));
+    END IF;
+END$$
+DELIMITER ;
+
+-- ============================================================
+-- TRIGGER 2: Si se cancela una compra recibida, restar stock
+-- ============================================================
+DROP TRIGGER IF EXISTS tr_compras_cancelar_restar_stock;
+
+DELIMITER $$
+CREATE DEFINER = 'trigger_runner'@'localhost' TRIGGER tr_compras_cancelar_restar_stock
+AFTER UPDATE ON compras
+FOR EACH ROW
+BEGIN
+    IF OLD.estado = 'recibida' AND NEW.estado = 'cancelada' THEN
+        UPDATE medicamentos m
+          INNER JOIN detalle_compras dc ON m.id_medicamento = dc.id_medicamento
+           SET m.stock = GREATEST(0, m.stock - dc.cantidad)
+         WHERE dc.id_compra = NEW.id_compra;
+
+        INSERT INTO auditoria (usuario_bd, tabla_afectada, accion, id_registro, detalle)
+        VALUES (USER(), 'compras', 'CANCELACION', NEW.id_compra,
+                CONCAT('Compra ', NEW.folio, ' cancelada; stock devuelto'));
+    END IF;
+END$$
+DELIMITER ;
+
+-- Verificar
+SELECT TRIGGER_NAME FROM information_schema.TRIGGERS
+WHERE TRIGGER_SCHEMA = 'vidaplus'
+ORDER BY TRIGGER_NAME;

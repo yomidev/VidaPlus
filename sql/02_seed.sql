@@ -445,6 +445,26 @@ INSERT INTO detalle_compras (id_compra, id_medicamento, cantidad, precio_unitari
 (9, 2, 200, 25.00, 5000.00), (9, 24, 50, 22.00, 1100.00), (9, 34, 50, 22.00, 1100.00), (9, 35, 100, 45.00, 4500.00),
 (10, 28, 50, 30.00, 1500.00), (10, 36, 50, 35.00, 1750.00), (10, 47, 50, 35.00, 1750.00), (10, 46, 50, 30.00, 1500.00);
 
+
+USE vidaplus;
+
+-- Rol específico para el portal
+INSERT IGNORE INTO roles (nombre, descripcion, nivel_acceso) 
+VALUES ('portal', 'Sistema automático del portal en línea', 1);
+
+-- Usuario sistema (no puede iniciar sesión: contraseña inutilizable)
+INSERT IGNORE INTO usuarios (username, password_hash, nombre_completo, email, id_rol, activo)
+SELECT 'portal_web', 
+       '$2y$10$invalidhashfortheportalaccountxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+       'Sistema Portal Web',
+       'portal@vidaplus.internal',
+       r.id_rol,
+       0  -- inactivo: no puede loguearse
+FROM roles r WHERE r.nombre = 'portal';
+
+-- Verificar
+SELECT id_usuario, username, activo FROM usuarios WHERE username = 'portal_web';
+
 -- ============================================================
 -- NOTA SOBRE CONTRASEÑAS
 -- ============================================================
